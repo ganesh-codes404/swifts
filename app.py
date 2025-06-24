@@ -3,11 +3,15 @@ import requests
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 import os
-load_dotenv()
-# Replace this with your real Genius API token
-GENIUS_API_TOKEN = os.getenv("GENIUS_API_TOKEN")
+from dotenv import load_dotenv
+
+# Load Genius API token from secrets or .env
+if "GENIUS_API_TOKEN" in st.secrets:
+    GENIUS_API_TOKEN = st.secrets["GENIUS_API_TOKEN"]
+else:
+    load_dotenv()
+    GENIUS_API_TOKEN = os.getenv("GENIUS_API_TOKEN")
 
 # Function to fetch lyrics
 def get_lyrics(song_title):
@@ -16,7 +20,6 @@ def get_lyrics(song_title):
     params = {"q": f"Taylor Swift {song_title}"}
 
     response = requests.get(search_url, params=params, headers=headers)
-    
     if response.status_code != 200:
         return None, "Error fetching data from Genius API"
 
@@ -27,7 +30,10 @@ def get_lyrics(song_title):
     song_url = hits[0]["result"]["url"]
 
     # Scrape lyrics from the song page
-    page = requests.get(song_url)
+    page = requests.get(song_url, headers={"User-Agent": "Mozilla/5.0"})
+    if page.status_code != 200:
+        return None, "Error fetching song page"
+
     soup = BeautifulSoup(page.text, "html.parser")
     lyrics = ""
 
@@ -36,18 +42,18 @@ def get_lyrics(song_title):
 
     if not lyrics.strip():
         return None, "Lyrics not found"
-    
+
     return lyrics, None
 
-# UI
+# Streamlit UI
 st.set_page_config(
     page_title="Swiftie Lyrics & Word Cloud",
-    page_icon="k",
+    page_icon="🎤",
     layout="centered"
 )
 
-st.title(" Taylor Swift Lyrics & Word Cloud Generator")
-st.write("Enter a **Taylor Swift** song title to fetch the lyrics and visualize the word cloud!")
+st.title("🎤 Taylor Swift Lyrics & Word Cloud Generator")
+st.write("Enter a **Taylor Swift** song title to fetch the lyrics and generate a word cloud!")
 
 song_title = st.text_input("Song Title", placeholder="Ex: Love Story")
 
@@ -66,7 +72,7 @@ if st.button("Get Lyrics"):
 
             st.subheader("☁️ Word Cloud:")
             wordcloud = WordCloud(width=800, height=400, background_color='white').generate(lyrics)
-            
+
             plt.figure(figsize=(10, 5))
             plt.imshow(wordcloud, interpolation="bilinear")
             plt.axis("off")
