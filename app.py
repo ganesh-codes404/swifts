@@ -6,8 +6,8 @@ from bs4 import BeautifulSoup
 import os
 from dotenv import load_dotenv
 
+# Securely load Genius API Token
 GENIUS_API_TOKEN = None
-
 try:
     GENIUS_API_TOKEN = st.secrets["GENIUS_API_TOKEN"]
 except (st.errors.StreamlitAPIException, KeyError):
@@ -15,10 +15,16 @@ except (st.errors.StreamlitAPIException, KeyError):
     GENIUS_API_TOKEN = os.getenv("GENIUS_API_TOKEN")
 
 if not GENIUS_API_TOKEN:
-    st.error("Genius API Token not found. Please check your .env or Streamlit secrets.")
+    st.error("Genius API Token not found. Please set it in your .env or Streamlit secrets.")
+    st.stop()
+
 # Function to fetch lyrics
 def get_lyrics(song_title):
-    headers = {"Authorization": f"Bearer {GENIUS_API_TOKEN}"}
+    headers = {
+        "Authorization": f"Bearer {GENIUS_API_TOKEN}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
+
     search_url = "https://api.genius.com/search"
     params = {"q": f"Taylor Swift {song_title}"}
 
@@ -32,10 +38,10 @@ def get_lyrics(song_title):
 
     song_url = hits[0]["result"]["url"]
 
-    # Scrape lyrics from the song page
-    page = requests.get(song_url, headers={"User-Agent": "Mozilla/5.0"})
+    # Scrape lyrics from song page
+    page = requests.get(song_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
     if page.status_code != 200:
-        return None, "Error fetching song page"
+        return None, f"Error fetching song page (status {page.status_code})"
 
     soup = BeautifulSoup(page.text, "html.parser")
     lyrics = ""
@@ -48,17 +54,13 @@ def get_lyrics(song_title):
 
     return lyrics, None
 
-# Streamlit UI
-st.set_page_config(
-    page_title="Swiftie Lyrics & Word Cloud",
-    page_icon="🎤",
-    layout="centered"
-)
+# Streamlit App Layout
+st.set_page_config(page_title="Swiftie Lyrics & Word Cloud", page_icon="🎤")
 
-st.title("🎤 Taylor Swift Lyrics & Word Cloud Generator")
-st.write("Enter a **Taylor Swift** song title to fetch the lyrics and generate a word cloud!")
+st.title("Taylor Swift Lyrics & Word Cloud Generator")
+st.write("Enter a Taylor Swift song title to fetch lyrics and see a word cloud!")
 
-song_title = st.text_input("Song Title", placeholder="Ex: Love Story")
+song_title = st.text_input("Song Title", placeholder="Example: Love Story")
 
 if st.button("Get Lyrics"):
     if not song_title.strip():
@@ -70,11 +72,11 @@ if st.button("Get Lyrics"):
         if error:
             st.error(error)
         else:
-            st.subheader("🎶 Lyrics:")
+            st.subheader(" Lyrics:")
             st.text_area("Lyrics", lyrics, height=300)
 
-            st.subheader("☁️ Word Cloud:")
-            wordcloud = WordCloud(width=800, height=400, background_color='white').generate(lyrics)
+            st.subheader("Word Cloud:")
+            wordcloud = WordCloud(width=800, height=400, background_color="white").generate(lyrics)
 
             plt.figure(figsize=(10, 5))
             plt.imshow(wordcloud, interpolation="bilinear")
