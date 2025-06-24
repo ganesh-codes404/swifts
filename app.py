@@ -6,13 +6,16 @@ from bs4 import BeautifulSoup
 import os
 from dotenv import load_dotenv
 
-# Load Genius API token from secrets or .env
-if "GENIUS_API_TOKEN" in st.secrets:
+GENIUS_API_TOKEN = None
+
+try:
     GENIUS_API_TOKEN = st.secrets["GENIUS_API_TOKEN"]
-else:
+except (st.errors.StreamlitAPIException, KeyError):
     load_dotenv()
     GENIUS_API_TOKEN = os.getenv("GENIUS_API_TOKEN")
 
+if not GENIUS_API_TOKEN:
+    st.error("Genius API Token not found. Please check your .env or Streamlit secrets.")
 # Function to fetch lyrics
 def get_lyrics(song_title):
     headers = {"Authorization": f"Bearer {GENIUS_API_TOKEN}"}
